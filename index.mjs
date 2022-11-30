@@ -1,7 +1,9 @@
-import { MongoClient } from "mongodb";
+import { MongoClient, ObjectId } from "mongodb";
 import dotenv from "dotenv";
-import joi, { equal, x } from 'joi';
+import joi from 'joi';
 import dayjs from 'dayjs';
+import express from 'express';
+import cors from 'cors';
 
 dotenv.config();
 
@@ -14,16 +16,16 @@ mongoClient.connect().then(() => {
 	db = mongoClient.db("chat");
 });
 
-app.use(cors);
+app.use(cors());
 app.use(express.json());
 
-const participantschema = joi.object({
-    name: joi.string().required,
-})
 
 app.post('/participants', async (req,res) => {
     const validation = participantschema.validate(req.body, {abortEarly: true});
     const usercollection = dbLivros.collection("participants");
+    const participantschema = joi.object({
+        name: joi.string().required,
+    })
     if(validation.error){
         res.sendStatus(422);
     }
@@ -59,7 +61,7 @@ app.post("/messages", async (req,res) => {
         text: joi.string().required(),
         type: joi.string().valid('message', 'private_message').required(),
     })
-    const validation = messageschema.validate(req.body);
+    const validation = messageschema.validate(req.body,{abortEarly: true});
     if(validation.error){
         res.sendStatus(422);
     }
@@ -116,7 +118,11 @@ app.post('/status', async(req,res) => {
        else{
         let lastStatus = Date.now();
         //ver como atualizar;
-        find.lastStatus = lastStatus;
+        usercollection.updateOne({name: user}, {
+            $set: {
+                lastStatus,
+            }
+        })
         res.sendStatus(200);
        }
     }
@@ -124,6 +130,32 @@ app.post('/status', async(req,res) => {
         res.sendStatus(422);
     }
 })
+
+
+const removerparticipantes = setInterval(15000, remover)
+
+async function remover(){
+    const usercollection = db.collection("participants");
+    const messagecollection = db.collection("messages");
+    try{
+       const userarray = await usercollection.find().toArray()
+       for(const i of userarray){
+        if(i.lastStatus + 10000 < Date.now()){
+          usercollection.deleteOne({lastStatus: ObjectId(i.lastStatus)});
+          messagecollection.insertOne({
+            from: i.from,
+            to: 'Todos',
+            text: 'saiu da sala...',
+            type: 'status',
+            time: dayjs('HH:MM:SS'),
+          })
+        }
+       }
+    }
+    catch (error){
+         res.sendStatus(422);
+    }
+}
 
 app.listen(5000, console.log("Listening to port 5000"));
 
