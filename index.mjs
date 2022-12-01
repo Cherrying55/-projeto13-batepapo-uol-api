@@ -21,25 +21,31 @@ app.use(express.json());
 
 
 app.post('/participants', async (req,res) => {
-    const validation = participantschema.validate(req.body, {abortEarly: true});
-    const usercollection = dbLivros.collection("participants");
     const participantschema = joi.object({
-        name: joi.string().required,
+        name: joi.string().required(),
     })
+    const validation = participantschema.validate(req.body, {abortEarly: true});
+    const usercollection = db.collection("participants");
     if(validation.error){
         res.sendStatus(422);
+        console.log(validation.error);
     }
     try{
-        const participante = await usercollection.findOne({name: req.body.user})
-        if(participante === true){
+        const participante = await usercollection.findOne({name: req.body.name})
+        console.log(participante)
+        console.log(req.body)
+        console.log("aaaaaa");
+        if(participante && !validation.error){
             res.sendStatus(409);
+        }
+        else if(!participante && !validation.error){
+            res.sendStatus(201);
         }
     }
     catch (error) {
-        res.sendStatus(422);
+        console.log(error);
     }
    usercollection.insertOne({name: req.body.name, lastStatus: Date.now()});
-   res.sendStatus(201);
 })
 
 app.get("/participants", async (req,res) => {
@@ -65,32 +71,35 @@ app.post("/messages", async (req,res) => {
     if(validation.error){
         res.sendStatus(422);
     }
-    //validar o from agora, que é header
-    try{
-        const jatem = await messagecollection.findOne({name: req.headers.user})
-        if(jatem === true){
+    else{
+        try{
+            const jatem = await messagecollection.findOne({name: req.headers.user})
+            if(jatem === true){
+                res.sendStatus(422);
+            }
+            else{
+                let newmsg = {
+                    to: req.body.to,
+                    text: req.body.text,
+                    type: req.body.type,
+                    from: req.headers.user,
+                    time: dayjs("HH:MM:SS"),
+                }
+                messagecollection.insertOne(newmsg);
+                res.sendStatus(201);
+            }
+        }
+        catch (error) {
             res.sendStatus(422);
         }
     }
-    catch (error) {
-        res.sendStatus(422);
-    }
-    let newmsg = {
-        to: req.body.to,
-        text: req.body.text,
-        type: req.body.type,
-        from: req.headers.user,
-        time: dayjs("HH:MM:SS"),
-    }
-    messagecollection.insertOne(newmsg);
-    res.sendStatus(201);
 })
 
 app.get('/messages', async (req,res) => {
     const messagecollection = db.collection("messages");
     const limit = req.query.limit;
     const user = req.headers.user;
-    const allmessages = 0;
+    let allmessages = 0;
     try{
         const r = await messagecollection.find().toArray();
         allmessages = r;
@@ -101,6 +110,9 @@ app.get('/messages', async (req,res) => {
     allmessages.filter((message) => {
         if(message.type === "message"|| (message.type === "private_message" && message.to === user)){
             return true;
+        }
+        else{
+            return false;
         }
     })
         res.send(limit? allmessages.slice(0,limit) : allmessages);
@@ -132,7 +144,7 @@ app.post('/status', async(req,res) => {
 })
 
 
-const removerparticipantes = setInterval(15000, remover)
+const removerparticipantes = setInterval(remover, 15000)
 
 async function remover(){
     const usercollection = db.collection("participants");
@@ -141,7 +153,7 @@ async function remover(){
        const userarray = await usercollection.find().toArray()
        for(const i of userarray){
         if(i.lastStatus + 10000 < Date.now()){
-          usercollection.deleteOne({lastStatus: ObjectId(i.lastStatus)});
+          usercollection.deleteOne({lastStatus: i.lastStatus});
           messagecollection.insertOne({
             from: i.from,
             to: 'Todos',
@@ -153,7 +165,7 @@ async function remover(){
        }
     }
     catch (error){
-         res.sendStatus(422);
+        console.log(error);
     }
 }
 
