@@ -4,6 +4,7 @@ import joi from 'joi';
 import dayjs from 'dayjs';
 import express from 'express';
 import cors from 'cors';
+import { stripHtml } from "string-strip-html";
 
 dotenv.config();
 
@@ -28,13 +29,9 @@ app.post('/participants', async (req,res) => {
     const usercollection = db.collection("participants");
     if(validation.error){
         res.sendStatus(422);
-        console.log(validation.error);
     }
     try{
         const participante = await usercollection.findOne({name: req.body.name})
-        console.log(participante)
-        console.log(req.body)
-        console.log("aaaaaa");
         if(participante && !validation.error){
             res.sendStatus(409);
         }
@@ -45,7 +42,8 @@ app.post('/participants', async (req,res) => {
     catch (error) {
         console.log(error);
     }
-   usercollection.insertOne({name: req.body.name, lastStatus: Date.now()});
+    let sanitized = stripHtml(req.body.name).result;
+   usercollection.insertOne({name: sanitized, lastStatus: Date.now()});
 })
 
 app.get("/participants", async (req,res) => {
@@ -168,6 +166,30 @@ async function remover(){
         console.log(error);
     }
 }
+
+app.delete('/messages/:id', async (req,res) => {
+    const { id } = req.params;
+    const user = req.headers.user;
+    try{
+        const find = await db.collection("messages").findOne({_id,})
+        if(find.from === user){
+             db.collection("messages").deleteOne({_id: ObjectId(id)});
+        }
+        else if(find.from && find.from !== user){
+            res.sendStatus(401);
+        }
+        else if(!find){
+            res.sendStatus(404);
+        }
+    }
+    catch (error){
+        res.sendStatus(422);
+    }
+})
+
+app.put("/messages", async(req,res) => {
+
+})
 
 app.listen(5000, console.log("Listening to port 5000"));
 
