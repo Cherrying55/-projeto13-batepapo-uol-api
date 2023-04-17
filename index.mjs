@@ -78,12 +78,15 @@ app.post("/messages", async (req,res) => {
                     type: req.body.type,
                     from: req.headers.user,
                     time: `${new Date().toTimeString().split(' ')[0]}`
-                }
+                };
                 messagecollection.insertOne(newmsg);
+                console.log("mensagem inserida")
                 res.sendStatus(201);
             }
         catch (error) {
+            console.log("mensagem n inserida");
             res.sendStatus(422);
+            
         }
     }
 })
