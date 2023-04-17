@@ -81,7 +81,7 @@ app.post("/messages", async (req,res) => {
                     text: req.body.text,
                     type: req.body.type,
                     from: req.headers.user,
-                    time: dayjs("HH:MM:SS"),
+                    time: `${new Date().toTimeString().split(' ')[0]}`
                 }
                 messagecollection.insertOne(newmsg);
                 res.sendStatus(201);
@@ -105,15 +105,16 @@ app.get('/messages', async (req,res) => {
     catch (error){
       res.sendStatus(422);
     }
-    allmessages.filter((message) => {
+    let filtered = allmessages.filter((message) => {
         if(message.type === "message"|| (message.type === "private_message" && message.to === user)){
             return true;
         }
         else{
             return false;
         }
-    })
-        res.send(limit? allmessages.slice(0,limit) : allmessages);
+    });
+    
+        res.send(limit? filtered.slice(0,limit) : allmessages);
 
 })
 
@@ -157,7 +158,7 @@ async function remover(){
             to: 'Todos',
             text: 'saiu da sala...',
             type: 'status',
-            time: dayjs('HH:MM:SS'),
+            time: `${new Date().toTimeString().split(' ')[0]}`
           })
         }
        }
@@ -168,7 +169,7 @@ async function remover(){
 }
 
 app.delete('/messages/:id', async (req,res) => {
-    const { id } = req.params;
+    const id = req.params.id;
     const user = req.headers.user;
     try{
         const find = await db.collection("messages").findOne({_id,})
