@@ -71,7 +71,7 @@ app.post("/messages", async (req,res) => {
     }
     else{
         try{
-            const jatem = await messagecollection.findOne({name: req.headers.user})
+            const jatem = await usercollection.findOne({name: req.headers.user})
             if(jatem === true){
                 res.sendStatus(422);
             }
