@@ -106,7 +106,7 @@ app.get('/messages', async (req,res) => {
       res.sendStatus(422);
     }
     let filtered = allmessages.filter((message) => {
-        if(message.type === "message"|| (message.type === "private_message" && message.to === user)){
+        if(message.type === "message"|| message.type === "status" || (message.type === "private_message" && message.to === user)){
             return true;
         }
         else{
@@ -154,13 +154,14 @@ async function remover(){
         if(i.lastStatus + 10000 < Date.now()){
           usercollection.deleteOne({lastStatus: i.lastStatus});
           messagecollection.insertOne({
-            from: i.from,
+            from: i.name,
             to: 'Todos',
-            text: 'saiu da sala...',
+            text: 'sai da sala...',
             type: 'status',
             time: `${new Date().toTimeString().split(' ')[0]}`
           })
         }
+        console.log("saiu")
        }
     }
     catch (error){
@@ -173,6 +174,7 @@ app.delete('/messages/:id', async (req,res) => {
     const user = req.headers.user;
     try{
         const find = await db.collection("messages").findOne({_id,})
+        console.log(find);
         if(find.from === user){
              db.collection("messages").deleteOne({_id: ObjectId(id)});
         }
