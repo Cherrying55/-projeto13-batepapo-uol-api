@@ -60,6 +60,7 @@ app.get("/participants", async (req,res) => {
 
 app.post("/messages", async (req,res) => {
     const messagecollection = db.collection("messages");
+    const usercollection = db.collection("participants");
     const messageschema = joi.object({
         to: joi.string().required(),
         text: joi.string().required(),
@@ -71,7 +72,8 @@ app.post("/messages", async (req,res) => {
     }
     else{
         try{
-            
+               const jatem = await usercollection.findOne({name: req.headers.user})
+               if(jatem){
                 let newmsg = {
                     to: req.body.to,
                     text: req.body.text,
@@ -82,6 +84,7 @@ app.post("/messages", async (req,res) => {
                 messagecollection.insertOne(newmsg);
                 console.log("mensagem inserida")
                 res.sendStatus(201);
+               }
             }
         catch (error) {
             console.log("mensagem n inserida");
